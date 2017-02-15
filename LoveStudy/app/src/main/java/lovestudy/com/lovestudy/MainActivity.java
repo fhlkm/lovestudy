@@ -24,6 +24,7 @@ import com.avos.avoscloud.AVException;
 import com.avos.avoscloud.AVObject;
 import com.avos.avoscloud.AVQuery;
 import com.avos.avoscloud.FindCallback;
+import com.avos.avoscloud.SaveCallback;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.DrawerBuilder;
 import com.mikepenz.materialdrawer.model.DividerDrawerItem;
@@ -41,6 +42,7 @@ public class MainActivity extends Activity {
     private ListView mlistView ;
     private EditText askeQuestion;
     private Button submitQuesiton;
+    ListViewAdapter mAdapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,6 +86,7 @@ public class MainActivity extends Activity {
         mlistView = (ListView)findViewById(R.id.mlist);
         askeQuestion = (EditText)findViewById(R.id.ask_question);
         submitQuesiton = (Button)findViewById(R.id.submit_question);
+        mAdapter= new ListViewAdapter(this,R.layout.item_question);
     }
     private void askQuestion(){
 
@@ -94,6 +97,24 @@ public class MainActivity extends Activity {
     private void logout(){
 
     }
+
+    private void createQuestion(String quesiton,String answer){
+        AVObject testObject = new AVObject(Util.bbsTableName);
+        testObject.put(Util.QUESTION,quesiton);
+        testObject.saveInBackground(new SaveCallback() {
+            @Override
+            public void done(AVException e) {
+                if(e == null){
+                    Log.d("saved","success!");
+                    retriveTeacherList();
+
+                }else{
+                    Util.showToast(getApplicationContext(), e.getMessage());
+                }
+            }
+        });
+    }
+    
     private void retriveTeacherList(){
         AVQuery<AVObject> avQuery = new AVQuery<>(Util.bbsTableName);
         avQuery.orderByDescending("createdAt");
@@ -105,7 +126,7 @@ public class MainActivity extends Activity {
                 if (e == null) {
                     if(null != list && list.size()>0){
                         questionList = list;
-                        questionList.notifyDataSetChanged();
+                        mAdapter.notifyDataSetChanged();
                     }
                 } else {
                     e.printStackTrace();
