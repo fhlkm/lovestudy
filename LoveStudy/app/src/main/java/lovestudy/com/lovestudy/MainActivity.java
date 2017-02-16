@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -43,6 +44,8 @@ public class MainActivity extends Activity {
     private EditText askeQuestion;
     private Button submitQuesiton;
     ListViewAdapter mAdapter;
+    private View mlistLayout;
+    private View askLayout;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,10 +53,12 @@ public class MainActivity extends Activity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 
         FloatingActionButton email = (FloatingActionButton) findViewById(R.id.fab);
+        if(email != null)
         email.setVisibility(View.GONE);
         new DrawerBuilder().withActivity(this).build();
         //if you want to update the items at a later time it is recommended to keep it in a variable
-        PrimaryDrawerItem item1 = new PrimaryDrawerItem().withIdentifier(1).withName("Email");
+
+        PrimaryDrawerItem item1 = new PrimaryDrawerItem().withIdentifier(1).withName(Util.getSP(getApplicationContext(),Util.email));
         SecondaryDrawerItem item2 = new SecondaryDrawerItem().withIdentifier(2).withName(R.string.check_bss);
         SecondaryDrawerItem item3 = new SecondaryDrawerItem().withIdentifier(2).withName(R.string.ask_question);
         SecondaryDrawerItem item4 = new SecondaryDrawerItem().withIdentifier(2).withName(R.string.logout);
@@ -72,7 +77,19 @@ public class MainActivity extends Activity {
                     @Override
                     public boolean onItemClick(View view, int position, IDrawerItem drawerItem) {
                         Log.i("Position: ",position+"");
-                        return false;
+                        if(position ==2){
+                            dialog = Util.showDialog(MainActivity.this,R.string.wait,R.string.connecting_server);
+                            mlistLayout.setVisibility(View.VISIBLE);
+                            askLayout.setVisibility(View.GONE);
+                            retriveTeacherList();
+                        }else if(position ==3){
+                            askQuestion();
+
+                        }else if(position ==4){
+                            logout();
+                            finish();
+                        }
+                        return true;
                     }
 
 
@@ -86,26 +103,57 @@ public class MainActivity extends Activity {
         mlistView = (ListView)findViewById(R.id.mlist);
         askeQuestion = (EditText)findViewById(R.id.ask_question);
         submitQuesiton = (Button)findViewById(R.id.submit_question);
+        submitQuesiton.setOnClickListener(Listener);
         mAdapter= new ListViewAdapter(this,R.layout.item_question);
+        mlistLayout = (View)findViewById(R.id.list_layout);
+        askLayout =(View)findViewById(R.id.ask_layout);
+        askLayout.setVisibility(View.GONE);
+        mlistView.setAdapter(mAdapter);
     }
+
+    View.OnClickListener Listener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+
+            dialog = Util.showDialog(MainActivity.this,R.string.wait,R.string.connecting_server);
+            createQuestion(askeQuestion.getText().toString());
+        }
+    };
     private void askQuestion(){
+        mlistLayout.setVisibility(View.GONE);
+        askLayout.setVisibility(View.VISIBLE);
 
     }
+
+
     private void showQuestion(){
+
+        askLayout.setVisibility(View.GONE);
+        dialog = Util.showDialog(this,R.string.wait,R.string.connecting_server);
+//        mlistView.setAdapter(mAdapter);
+        retriveTeacherList();
 
     }
     private void logout(){
+        Util.clearSP(getApplicationContext());
+        Intent mIntent = new Intent(this, LoginActivity.class);
+        startActivity(mIntent);
 
     }
 
-    private void createQuestion(String quesiton,String answer){
+    private void createQuestion(String quesiton){
         AVObject testObject = new AVObject(Util.bbsTableName);
         testObject.put(Util.QUESTION,quesiton);
+        testObject.put(Util.ANSWER,"");
+        testObject.put(Util.ANSWERPerson,"");
+        testObject.put(Util.email,Util.getSP(getApplicationContext(),Util.email));
         testObject.saveInBackground(new SaveCallback() {
             @Override
             public void done(AVException e) {
                 if(e == null){
                     Log.d("saved","success!");
+                    mlistLayout.setVisibility(View.VISIBLE);
+                    askLayout.setVisibility(View.GONE);
                     retriveTeacherList();
 
                 }else{
@@ -155,11 +203,19 @@ public class MainActivity extends Activity {
 
         @Override
         public int getCount() {
-            return questionList.size();
+            int size = questionList.size();
+            return size;
         }
 
-
-        @NonNull
+        @Override
+        public int getItemViewType(int position) {
+            return position;
+        }
+        @Override
+        public long getItemId(int arg0) {
+            // TODO Auto-generated method stub
+            return arg0;
+        }
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
 
@@ -170,7 +226,7 @@ public class MainActivity extends Activity {
             mholder.text = (TextView)rowView.findViewById(R.id.question);
             mholder.answer = (TextView)rowView.findViewById(R.id.answer);
 
-            AVObject mObject = questionList.get(position);
+            final AVObject mObject = questionList.get(position);
             String question = mObject.get(Util.QUESTION).toString();
             String answer = mObject.get(Util.ANSWER).toString();
 
@@ -183,11 +239,12 @@ public class MainActivity extends Activity {
                 mholder.text.setOnLongClickListener(new View.OnLongClickListener() {
                     @Override
                     public boolean onLongClick(View view) {
-                        return false;
+                        customerDialog(mObject);
+                        return true;
                     }
                 });
             }
-            mholder.text.setText(Util.getSP(getApplicationContext(),Util.email)+":"+question);
+            mholder.text.setText(mObject.get(Util.email)+":"+question);
 
 
             return rowView;
@@ -198,7 +255,7 @@ public class MainActivity extends Activity {
     public void customerDialog(final AVObject mobject){
         final Dialog dialog = new Dialog(MainActivity.this);
         dialog.setContentView(R.layout.custom);
-        dialog.setTitle("批注");
+        dialog.setTitle("问题");
 
         final EditText mEditText = (EditText) dialog.findViewById(R.id.add_comment);
 
@@ -207,7 +264,7 @@ public class MainActivity extends Activity {
         dialogButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mobject.put(Util.COMMENT, mEditText.getText().toString());
+                mobject.put(Util.ANSWER, mEditText.getText().toString());
                 if(updateList.indexOf(mobject) ==-1) {
                     updateList.add(mobject);
                 }

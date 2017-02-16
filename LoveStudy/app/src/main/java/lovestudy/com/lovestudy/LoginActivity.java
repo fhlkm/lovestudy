@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.avos.avoscloud.AVException;
 import com.avos.avoscloud.AVUser;
@@ -23,19 +24,28 @@ public class LoginActivity extends Activity {
     private EditText password;
     private Button login;
     private ProgressDialog dialog;
+    private TextView signupAction;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
 
         initUI();
-        login.setOnClickListener(Listener);
+        if(Util.getSP(getApplicationContext(),Util.email)!=null){
+            Intent mIntent = new Intent(this, MainActivity.class);
+            startActivity(mIntent);
+            finish();
+        }
+
     }
 
     private void initUI(){
         usrName = (EditText)findViewById(R.id.editText);
         password = (EditText)findViewById(R.id.editText2);
         login = (Button)findViewById(R.id.button);
+        signupAction = (TextView)findViewById(R.id.link_signup);
+        login.setOnClickListener(Listener);
+        signupAction.setOnClickListener(signupListener);
     }
     View.OnClickListener Listener = new View.OnClickListener() {
         @Override
@@ -46,6 +56,18 @@ public class LoginActivity extends Activity {
     };
 
 
+    View.OnClickListener signupListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            startSignupAction();
+            finish();
+        }
+    };
+
+    private void startSignupAction(){
+        Intent intent = new Intent(this, SignupActivity.class);
+        startActivity(intent);
+    }
     private void loginAction(){
         AVUser.logInInBackground(usrName.getText().toString(), password.getText().toString(), new LogInCallback<AVUser>() {
             @Override
