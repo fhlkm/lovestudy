@@ -100,7 +100,7 @@
         android:id="@+id/link_signup"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="No account yet? Create one"
+        android:text="注册"
         android:textSize="16dip"
         android:gravity="center_horizontal"
         android:layout_alignParentBottom="true"
